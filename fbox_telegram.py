@@ -210,13 +210,6 @@ def check_status():
         detail = get_detail(cid)
         power = get_power(cid)
 
-        # DEBUG temporal
-        print(f"\n=== {name} ===")
-        print(f"detail.code: {detail.get('code')}")
-        if detail.get('data'):
-            print(f"detail.data keys: {list(detail['data'].keys())[:10]}")
-        print("============\n")
-
         if isinstance(power, dict) and power.get("__error__"):
             msg += f"🔹 {name}\n"
             msg += "⚠️ Error leyendo potencia\n\n"
@@ -423,8 +416,8 @@ def save_to_history(state):
         # Guardar historial actualizado
         with open(HISTORY_FILE, 'w') as f:
             json.dump(history, f)
-    except Exception as e:
-        print(f"Error guardando historial: {e}")
+    except Exception:
+        pass
 
 def load_last_report_time():
     """Carga el timestamp del último reporte completo"""
@@ -585,8 +578,7 @@ def calculate_weekly_stats():
             }
         
         return summary
-    except Exception as e:
-        print(f"Error calculando estadísticas semanales: {e}")
+    except Exception:
         return None
 
 def generate_weekly_report():
