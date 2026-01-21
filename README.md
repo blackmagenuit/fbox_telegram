@@ -17,6 +17,20 @@ Sistema automatizado de monitoreo 24/7 para contenedores de minería FBOX con no
 - **Potencia**: Consumo actual en kW
 - **Consumo diario**: kWh consumidos en el día
 
+### 🛢️ Monitor de Tanques (Nuevo)
+Sistema especializado de monitoreo para tanques y sistemas de enfriamiento:
+- **Temperatura del aceite**: Con rango mín/máx de sensores
+- **Temperatura del tanque**: Ambiente interno
+- **Diferencia térmica**: Δ temperatura aceite vs tanque
+- **Eficiencia de enfriamiento**: Porcentaje de rendimiento
+- **Estado de inmersión**: Con niveles críticos y advertencia
+- **Nivel del tanque**: Porcentaje de llenado
+- **Flujo de aceite**: Caudal en L/min
+- **Presión del sistema**: En bar
+- **Estado de bombas**: Status y RPM
+- **Estado de filtros**: Condición y presión diferencial
+- **Temperaturas entrada/salida**: Para análisis de eficiencia
+
 ### Sistema de Alertas Automáticas Inteligente
 El sistema compara el estado actual vs el anterior y detecta anomalías:
 - 🔴 **Contenedor OFFLINE**: Notificación inmediata si el contenedor deja de responder
@@ -24,19 +38,34 @@ El sistema compara el estado actual vs el anterior y detecta anomalías:
 - ⛏️ **Mineros caídos**: Alerta cuando caen ≥10 mineros entre reportes
 - ⚡ **Potencia anormal**: Alerta cuando la potencia cae ≥30% respecto al reporte anterior
 
+### 🚨 Alertas de Tanques
+Sistema avanzado de alertas para tanques con niveles críticos y advertencias:
+- 🔥 **Temperatura crítica**: Aceite ≥58°C (advertencia desde 52°C)
+- 💧 **Inmersión crítica**: <80% (advertencia <88%)
+- 📊 **Nivel crítico**: <60% (advertencia <75%)
+- 🌊 **Flujo crítico**: <3 L/min (advertencia <8 L/min)
+- 💪 **Presión anormal**: <0.8 bar o >4.5 bar
+- ❄️ **Eficiencia baja**: <70% de enfriamiento
+- 🌡️ **Diferencial alto**: Δ temperatura >15°C
+- ⚙️ **Bomba offline**: Detección de fallas en bombas
+- 🔍 **Filtros sucios**: ΔP >0.5 bar o estado sucio
+
 **Características:**
-- Sistema de detección de cambios: compara estado anterior guardado en `fbox_state.json`
+- Sistema de detección de cambios: compara estado anterior guardado en `fbox_state.json` y `tank_state.json`
 - Alertas separadas: mensajes críticos se envían antes del reporte regular
 - Contexto completo: las alertas incluyen valores antiguos vs nuevos
+- Niveles de alerta: Crítico (🔴), Advertencia (⚠️), Normal (✅)
 
 ### Automatización
-- Ejecución automática cada hora mediante **GitHub Actions**
+- Ejecución automática cada hora mediante **GitHub Actions** (Monitor FBOX)
+- Ejecución cada 15 minutos para **Monitor de Tanques**
 - Sin necesidad de servidor o PC encendida 24/7
 - Completamente gratuito
 - Notificaciones vía Telegram Bot
 
-## 📊 Ejemplo de Reporte
+## 📊 Ejemplos de Reportes
 
+### Reporte FBOX
 ```
 📦 FBOX STATUS
 2026-01-21 14:30:00
@@ -62,6 +91,36 @@ El sistema compara el estado actual vs el anterior y detecta anomalías:
 ⚡ Potencia: 971.78 kW
 ```
 
+### Reporte de Tanques
+```
+🛢️ ESTADO DE TANQUES
+2026-01-21 14:30:00
+
+🔹 C01
+🟢 ONLINE
+🔥 Aceite: 45.2 °C (rango: 43.8-46.5 °C)
+🌡️ Tanque: 41.7 °C (Δ3.5°C)
+❄️ Enfriamiento: 85%
+💧 Inmersión: On (95%) ✅
+📊 Nivel: 87%
+🌊 Flujo: 12.5 L/min
+💪 Presión: 2.3 bar
+⚙️ Bombas: On (1450 RPM)
+🔍 Filtros: OK (ΔP: 0.2 bar)
+
+🔹 C02
+🟢 ONLINE
+🔥 Aceite: 42.5 °C (rango: 41.2-43.9 °C)
+🌡️ Tanque: 39.8 °C (Δ2.7°C)
+❄️ Enfriamiento: 90%
+💧 Inmersión: On (98%) ✅
+📊 Nivel: 92%
+🌊 Flujo: 13.8 L/min
+💪 Presión: 2.1 bar
+⚙️ Bombas: On (1480 RPM)
+🔍 Filtros: OK (ΔP: 0.15 bar)
+```
+
 ## ⚙️ Configuración
 
 ### Contenedores Monitoreados
@@ -70,9 +129,21 @@ El sistema compara el estado actual vs el anterior y detecta anomalías:
 - **Área**: 10000013
 
 ### Umbrales de Alertas
+
+**Monitor FBOX:**
 - Temperatura alta: ≥55°C
 - Mineros caídos: ≥10 unidades
 - Caída de potencia: ≥30%
+
+**Monitor de Tanques:**
+- Temperatura crítica: ≥58°C (advertencia: ≥52°C)
+- Inmersión crítica: <80% (advertencia: <88%)
+- Nivel crítico: <60% (advertencia: <75%)
+- Flujo crítico: <3 L/min (advertencia: <8 L/min)
+- Presión: <0.8 bar o >4.5 bar
+- Eficiencia enfriamiento: <70%
+- Diferencial térmico: >15°C
+- Presión diferencial filtros: >0.5 bar
 
 ### Zona Horaria
 - **America/Asuncion** (UTC-3, Paraguay)
@@ -194,6 +265,7 @@ Ejemplo:
 
 Primero configura las variables de entorno:
 
+**Monitor FBOX:**
 ```bash
 # Windows PowerShell
 $env:BOT_TOKEN="tu_token_aqui"
@@ -208,9 +280,26 @@ export FBOX_SSID="tu_ssid_aqui"
 python fbox_telegram.py
 ```
 
+**Monitor de Tanques:**
+```bash
+# Windows PowerShell
+$env:BOT_TOKEN="tu_token_aqui"
+$env:CHAT_ID="tu_chat_id_aqui"
+$env:FBOX_SSID="tu_ssid_aqui"
+$env:FBOX_ADMIN_TOKEN="tu_admin_token_aqui"
+python tank_monitor.py
+
+# Linux/Mac
+export BOT_TOKEN="tu_token_aqui"
+export CHAT_ID="tu_chat_id_aqui"
+export FBOX_SSID="tu_ssid_aqui"
+export FBOX_ADMIN_TOKEN="tu_admin_token_aqui"
+python tank_monitor.py
+```
+
 ### Para ejecutar manualmente en GitHub:
 1. Ve a la pestaña "Actions"
-2. Selecciona "FBOX Monitor"
+2. Selecciona "FBOX Monitor" o "Tank Monitor"
 3. Click en "Run workflow"
 4. Selecciona la rama "main"
 5. Click en el botón verde "Run workflow"
