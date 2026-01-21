@@ -1,0 +1,26 @@
+# Estado del bot (se actualizará automáticamente por GitHub Actions)
+fbox_state.json
+last_report_time.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Variables de entorno locales
+.env
