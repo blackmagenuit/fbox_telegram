@@ -305,19 +305,20 @@ def detect_alerts(old_state, new_state):
         
         # Detectar si cayeron mineros
         if isinstance(old_online, int) and isinstance(new_online, int) and isinstance(old_offline, int) and isinstance(new_offline, int):
-            drop_online = old_online - new_online
-            increase_offline = new_offline - old_offline
-            
-            # Alertar si cayeron online O aumentaron offline
-            if drop_online >= MINERS_DROP_THRESHOLD or increase_offline >= MINERS_DROP_THRESHOLD:
-                change = max(drop_online, increase_offline)
-                alerts.append(
-                    f"⚠️ 🔻 ALERTA: MINEROS CAÍDOS\n"
-                    f"📍 Contenedor: {name}\n"
-                    f"📉 Cantidad caída: {change} minero(s)\n"
-                    f"📊 Estado anterior: {old_online} online / {old_offline} offline\n"
-                    f"📊 Estado actual: {new_online} online / {new_offline} offline"
-                )
+            # Solo alertar si el estado anterior era válido (contenedor estaba online)
+            if old_online > 0 or old_offline > 0:
+                drop_online = old_online - new_online
+                increase_offline = new_offline - old_offline
+                
+                # Alertar si cayeron online O aumentaron offline
+                if drop_online >= MINERS_DROP_THRESHOLD or increase_offline >= MINERS_DROP_THRESHOLD:
+                    change = max(drop_online, increase_offline)
+                    alerts.append(
+                        f"⚠️ 🔻 ALERTA: MINEROS CAÍDOS\n"
+                        f"📍 Contenedor: {name}\n"
+                        f"📉 Cantidad caída: {change} minero(s)\n"
+                        f"📊 Estado actual: {new_online} online / {new_offline} offline"
+                    )
         
         # ⚡ ALERTA: Potencia anormalmente baja
         old_kw = old_data.get("power_kw")
