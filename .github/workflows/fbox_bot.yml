@@ -14,6 +14,13 @@ jobs:
     - name: Checkout código
       uses: actions/checkout@v4
     
+    - name: Restaurar archivos de estado previos
+      uses: actions/download-artifact@v4
+      continue-on-error: true
+      with:
+        name: fbox-state-files
+        path: .
+    
     - name: Configurar Python
       uses: actions/setup-python@v5
       with:

@@ -450,9 +450,11 @@ def save_to_history(state):
         
         # Guardar historial actualizado
         with open(HISTORY_FILE, 'w') as f:
-            json.dump(history, f)
-    except Exception:
-        pass
+            json.dump(history, f, indent=2)
+        
+        print(f"📝 Historial guardado: {len(history)} registros")
+    except Exception as e:
+        print(f"⚠️ Error guardando historial: {e}")
 
 def save_alerts_to_history(alerts):
     """Guarda las alertas en el historial para reportes Excel"""
