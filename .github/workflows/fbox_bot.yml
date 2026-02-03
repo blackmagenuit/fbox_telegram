@@ -1,0 +1,56 @@
+name: FBOX Telegram Bot
+
+on:
+  schedule:
+    # Ejecutar cada 5 minutos
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # Permite ejecución manual
+
+jobs:
+  check-fbox:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Instalar dependencias
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Crear archivo .env
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        CHAT_ID: ${{ secrets.CHAT_ID }}
+        FBOX_SSID: ${{ secrets.FBOX_SSID }}
+        FBOX_ADMIN_TOKEN: ${{ secrets.FBOX_ADMIN_TOKEN }}
+      run: |
+        cat > .env << EOF
+        BOT_TOKEN=$BOT_TOKEN
+        CHAT_ID=$CHAT_ID
+        FBOX_SSID=$FBOX_SSID
+        FBOX_ADMIN_TOKEN=$FBOX_ADMIN_TOKEN
+        DROPBOX_PATH=
+        EOF
+    
+    - name: Ejecutar bot FBOX
+      run: |
+        python fbox_telegram.py
+    
+    - name: Guardar archivos de estado
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: fbox-state-files
+        path: |
+          fbox_state.json
+          fbox_history.json
+          fbox_alerts_history.json
+          last_report_time.json
+        retention-days: 7

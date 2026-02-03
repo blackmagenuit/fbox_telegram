@@ -220,11 +220,34 @@ def check_status():
             msg += "⚠️ Error leyendo detalle\n\n"
             continue
 
-        status_icon = "🟢 ONLINE" if (detail.get("code") == 1) else "🔴 OFFLINE"
+        is_online = (detail.get("code") == 1)
+        status_icon = "🟢 ONLINE" if is_online else "🔴 OFFLINE"
+        
+        d = (detail.get("data") or {})
+        
+        # Si el contenedor está OFFLINE, usar N/A para todo
+        if not is_online:
+            msg += f"🔹 {name}\n"
+            msg += f"{status_icon}\n"
+            msg += f"🔥 Aceite: N/A °C\n"
+            msg += f"⛏ Mineros: N/A\n"
+            msg += "⚡ Potencia: N/A\n\n"
+            
+            state[name] = {
+                "code": detail.get("code", -1),
+                "miner_online": "N/A",
+                "miner_offline": "N/A",
+                "oil_temp": None,
+                "container_temp": None,
+                "hashrate_ph": None,
+                "power_kw": None
+            }
+            continue
+        
+        # Si está ONLINE, procesar los datos normalmente
         oil_temp = calc_oil_temp(detail)
         temp_txt = f"{oil_temp}" if oil_temp is not None else "N/A"
-
-        d = (detail.get("data") or {})
+        
         # Convertir mineros a int, si no se puede usar 0
         try:
             m_on = int(d.get("miner_online", 0))
