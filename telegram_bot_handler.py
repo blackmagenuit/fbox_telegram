@@ -107,7 +107,7 @@ def generate_excel_report(days=7):
         return None
 
 def get_alerts_summary():
-    """Obtiene un resumen de las alertas registradas"""
+    """Obtiene un resumen de las alertas del día actual"""
     ALERTS_HISTORY_FILE = "fbox_alerts_history.json"
     
     try:
@@ -127,17 +127,41 @@ def get_alerts_summary():
         if not history:
             return "📊 No hay alertas registradas aún."
         
-        total_alerts = sum(len(a.get('alerts', [])) for a in history)
+        # Filtrar alertas del día actual
+        today = now_paraguay().date()
+        today_alerts = []
         
-        first = datetime.fromisoformat(history[0]['timestamp'])
-        last = datetime.fromisoformat(history[-1]['timestamp'])
+        for entry in history:
+            try:
+                entry_time = datetime.fromisoformat(entry['timestamp'])
+                if entry_time.date() == today:
+                    alerts_list = entry.get('alerts', [])
+                    for alert in alerts_list:
+                        today_alerts.append({
+                            'time': entry_time,
+                            'message': alert
+                        })
+            except:
+                continue
         
-        msg = "📊 RESUMEN DE ALERTAS\n"
-        msg += "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        msg += f"Total eventos: {len(history)}\n"
-        msg += f"Total alertas: {total_alerts}\n"
-        msg += f"Primer registro: {first.strftime('%Y-%m-%d %H:%M')}\n"
-        msg += f"Último registro: {last.strftime('%Y-%m-%d %H:%M')}\n\n"
+        msg = f"📊 ALERTAS DEL DÍA - {today.strftime('%d/%m/%Y')}\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        if not today_alerts:
+            msg += "✅ No hay alertas registradas hoy.\n\n"
+        else:
+            msg += f"⚠️ Total de alertas hoy: {len(today_alerts)}\n\n"
+            
+            # Mostrar las últimas 10 alertas
+            for i, alert in enumerate(today_alerts[-10:], 1):
+                time_str = alert['time'].strftime('%H:%M')
+                msg += f"{i}. [{time_str}] {alert['message']}\n"
+            
+            if len(today_alerts) > 10:
+                msg += f"\n... y {len(today_alerts) - 10} alertas más.\n"
+            
+            msg += "\n"
+        
         msg += "📥 Usa /resumen7 para Excel de 7 días\n"
         msg += "📥 Usa /resumen30 para Excel de 30 días\n"
         msg += "📥 Usa /resumentodo para todas las alertas"
