@@ -53,7 +53,7 @@ POWER_DROP_THRESHOLD = 30  # porcentaje
 IMMERSION_MIN_PERCENT = 90  # porcentaje mínimo de inmersión
 
 # ============ CONFIGURACIÓN DE TIEMPO ============
-ALERT_CHECK_INTERVAL = 5  # minutos - revisar alertas cada 5 minutos
+ALERT_CHECK_INTERVAL = 30  # minutos - revisar alertas cada 30 minutos
 FULL_REPORT_INTERVAL = 60  # minutos - enviar reporte completo cada hora
 WEEKLY_REPORT_DAY = 0  # día de la semana para reporte semanal (0=Lunes, 6=Domingo)
 
