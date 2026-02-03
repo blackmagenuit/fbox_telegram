@@ -755,8 +755,17 @@ if __name__ == "__main__":
             except:
                 print("⏭️ Reporte completo omitido")
     
-    # Reporte semanal: solo se envía bajo demanda con comando /semanal
-    # (no se envía automáticamente)
+    # Reporte semanal automático (cada lunes)
+    if should_send_weekly_report():
+        weekly_stats = calculate_weekly_stats()
+        if weekly_stats:
+            weekly_msg = format_weekly_report(weekly_stats)
+            send_telegram(weekly_msg)
+            save_last_weekly_report()
+            print("📊 REPORTE SEMANAL ENVIADO (lunes)")
+            print(weekly_msg)
+        else:
+            print("⚠️ No hay datos suficientes para reporte semanal")
     
     # Guardar estado actual y agregar al historial
     save_state(current_state)
