@@ -53,8 +53,8 @@ POWER_DROP_THRESHOLD = 30  # porcentaje
 IMMERSION_MIN_PERCENT = 90  # porcentaje mínimo de inmersión
 
 # ============ CONFIGURACIÓN DE TIEMPO ============
-ALERT_CHECK_INTERVAL = 60  # minutos - revisar alertas cada 60 minutos
-FULL_REPORT_INTERVAL = 60  # minutos - enviar reporte completo cada hora
+ALERT_CHECK_INTERVAL = 60  # minutos - revisar alertas cada 60 minutos (1 hora)
+FULL_REPORT_INTERVAL = 60  # minutos - enviar reporte completo cada 60 minutos (1 hora)
 WEEKLY_REPORT_DAY = 0  # día de la semana para reporte semanal (0=Lunes, 6=Domingo)
 
 def fetch_json(url):
@@ -720,54 +720,55 @@ def generate_weekly_report():
 # ============ EJECUCIÓN ÚNICA ============
 if __name__ == "__main__":
     print(f"⏰ Ejecutando check: {now_paraguay()}")
-    print(f"📋 Configuración: Alertas cada {ALERT_CHECK_INTERVAL} min, Reporte completo cada {FULL_REPORT_INTERVAL} min")
+    print(f"📋 Configuración: Reporte cada {FULL_REPORT_INTERVAL} min")
     
     msg, current_state = check_status()
     old_state = load_state()
     
-    # SIEMPRE detectar y enviar alertas críticas (cada 5 minutos)
+    # Detectar alertas pero NO enviar por Telegram (solo guardaria en historial)
     alerts = detect_alerts(old_state, current_state)
     
     if alerts:
-        alert_msg = "🚨 ALERTA FBOX\n"
-        alert_msg += f"{now_paraguay().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        save_alerts_to_history(alerts)  # Guardar alertas en historial para Excel
+        print("✅ Alertas detectadas y guardadas en historial:")
         for alert in alerts:
-            alert_msg += f"{alert}\n"
-        
-        send_telegram(alert_msg)
-        save_alerts_to_history(alerts)  # Guardar alertas en historial
-        print("🚨 ALERTA ENVIADA:")
-        print(alert_msg)
+            print(f"  - {alert}")
     else:
         print("✅ Sin alertas detectadas")
     
-    # Enviar reporte completo solo cada hora
+    # Enviar reporte completo solo cada hora (CON O SIN ALERTAS)
     if should_send_full_report():
+        # Incluir alertas en el reporte si las hay
+        if alerts:
+            alert_section = "🚨 ALERTAS DETECTADAS:\n"
+            for alert in alerts:
+                alert_section += f"{alert}\n"
+            alert_section += "\n"
+            msg = alert_section + msg
+        
         send_telegram(msg)
         save_last_report_time()
-        print("📊 REPORTE COMPLETO ENVIADO (cada hora)")
+        print("📊 REPORTE ENVIADO (cada hora)")
         print(msg)
     else:
         last_time = load_last_report_time()
         if last_time:
             try:
                 last_dt = datetime.fromisoformat(last_time)
-                elapsed = (datetime.now() - last_dt).total_seconds() / 60
-                print(f"⏭️ Reporte completo omitido (último hace {elapsed:.1f} min, se envía cada {FULL_REPORT_INTERVAL} min)")
+                elapsed = (now_paraguay() - last_dt).total_seconds() / 60
+                print(f"⏭️ Próximo reporte en {FULL_REPORT_INTERVAL - elapsed:.1f} min (se envía cada {FULL_REPORT_INTERVAL} min)")
             except:
-                print("⏭️ Reporte completo omitido")
+                print("⏭️ Próximo reporte en breve")
+        else:
+            print("⏭️ Esperando próxima ventana de reporte")
     
     # Reporte semanal automático (cada lunes)
     if should_send_weekly_report():
-        weekly_stats = calculate_weekly_stats()
-        if weekly_stats:
-            weekly_msg = format_weekly_report(weekly_stats)
-            send_telegram(weekly_msg)
-            save_last_weekly_report()
-            print("📊 REPORTE SEMANAL ENVIADO (lunes)")
-            print(weekly_msg)
-        else:
-            print("⚠️ No hay datos suficientes para reporte semanal")
+        weekly_msg = generate_weekly_report()
+        send_telegram(weekly_msg)
+        save_last_weekly_report()
+        print("📊 REPORTE SEMANAL ENVIADO (lunes)")
+        print(weekly_msg)
     
     # Guardar estado actual y agregar al historial
     save_state(current_state)
