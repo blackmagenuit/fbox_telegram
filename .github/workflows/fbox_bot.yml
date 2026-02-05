@@ -2,10 +2,15 @@ name: FBOX Telegram Bot
 
 on:
   schedule:
-    # Ejecutar cada 1 hora (cada 60 minutos)
-    # IMPORTANTE: Este cron ejecuta en el minuto 0 de cada hora (00:00, 01:00, 02:00, etc.)
+    # Ejecutar cada 1 hora para chequeos regulares
     - cron: '0 * * * *'
+    # Ejecutar cada lunes a las 00:00 UTC para generar Excel semanal
+    - cron: '0 0 * * 1'
   workflow_dispatch:  # Permite ejecución manual
+
+env:
+  # Variable para identificar si es ejecución semanal (lunes)
+  IS_MONDAY: ${{ github.event.schedule == '0 0 * * 1' }}
 
 jobs:
   check-fbox:
@@ -51,6 +56,12 @@ jobs:
       run: |
         python fbox_telegram.py
     
+    - name: Generar reporte Excel semanal
+      if: github.event.schedule == '0 0 * * 1'
+      run: |
+        pip install openpyxl
+        python generate_excel_report.py
+    
     - name: Guardar archivos de estado
       uses: actions/upload-artifact@v4
       if: always()
@@ -62,3 +73,11 @@ jobs:
           fbox_alerts_history.json
           last_report_time.json
         retention-days: 7
+    
+    - name: Subir reporte Excel
+      uses: actions/upload-artifact@v4
+      if: github.event.schedule == '0 0 * * 1'
+      with:
+        name: fbox-weekly-reports
+        path: FBOX_Report_*.xlsx
+        retention-days: 30
