@@ -2,7 +2,8 @@ name: FBOX Telegram Bot
 
 on:
   schedule:
-    # Ejecutar cada 60 minutos (1 hora)
+    # Ejecutar cada 1 hora (cada 60 minutos)
+    # IMPORTANTE: Este cron ejecuta en el minuto 0 de cada hora (00:00, 01:00, 02:00, etc.)
     - cron: '0 * * * *'
   workflow_dispatch:  # Permite ejecución manual
 
