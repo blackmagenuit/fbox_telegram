@@ -72,6 +72,7 @@ jobs:
           fbox_history.json
           fbox_alerts_history.json
           last_report_time.json
+          last_weekly_report.json
         retention-days: 7
     
     - name: Subir reporte Excel

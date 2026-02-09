@@ -528,8 +528,10 @@ def load_last_weekly_report():
             with open(WEEKLY_TIME_FILE, 'r') as f:
                 data = json.load(f)
                 return data.get("last_weekly_report")
-    except:
-        pass
+        else:
+            print(f"ℹ️ Archivo de reporte semanal no existe: {WEEKLY_TIME_FILE}")
+    except Exception as e:
+        print(f"⚠️ Error cargando último reporte semanal: {e}")
     return None
 
 def save_last_weekly_report():
@@ -537,8 +539,9 @@ def save_last_weekly_report():
     try:
         with open(WEEKLY_TIME_FILE, 'w') as f:
             json.dump({"last_weekly_report": now_paraguay().isoformat()}, f)
-    except:
-        pass
+        print(f"✅ Último reporte semanal guardado en: {WEEKLY_TIME_FILE}")
+    except Exception as e:
+        print(f"❌ Error guardando último reporte semanal: {e}")
 
 def should_send_weekly_report():
     """Determina si debe enviarse el reporte semanal (una vez por semana, los lunes)"""
@@ -553,26 +556,22 @@ def should_send_weekly_report():
         return True  # Primera ejecución
     
     try:
+        # Asegurar que es un string antes de parsear
+        if not isinstance(last_time, str):
+            return True
+        
         last_dt = datetime.fromisoformat(last_time)
+        now_dt = now_paraguay()
         
-        # Calcular horas transcurridas desde el último reporte
-        hours_elapsed = (now - last_dt).total_seconds() / 3600
+        # Calcular días completos desde el último reporte
+        days_elapsed = (now_dt - last_dt).days
         
-        # Solo enviar si han pasado al menos 6 días (144 horas)
-        # Esto evita que se envíe múltiples veces el mismo día
-        if hours_elapsed < 144:  # 6 días = 144 horas
-            return False
-        
-        # Verificar que estamos en una semana diferente
-        now_week = now.isocalendar()[1]  # Número de semana del año
-        now_year = now.isocalendar()[0]  # Año
-        last_week = last_dt.isocalendar()[1]
-        last_year = last_dt.isocalendar()[0]
-        
-        # Enviar solo si estamos en una semana diferente Y han pasado 6+ días
-        return (now_year, now_week) != (last_year, last_week)
-    except:
-        return True
+        # Solo enviar si han pasado al menos 7 días (una semana completa)
+        # Esto asegura que no se envíe múltiples veces en el mismo lunes
+        return days_elapsed >= 7
+    except Exception as e:
+        print(f"Error en should_send_weekly_report: {e}")
+        return True  # Si hay error, enviar para estar seguro
 
 def calculate_weekly_stats():
     """Calcula estadísticas semanales del historial"""
