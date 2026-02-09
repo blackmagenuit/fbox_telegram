@@ -50,12 +50,10 @@ headers = {
 TEMP_ALERT_THRESHOLD = 55  # °C
 MINERS_DROP_THRESHOLD = 1  # cantidad de mineros (alerta con 1 solo minero caído)
 POWER_DROP_THRESHOLD = 30  # porcentaje
-IMMERSION_MIN_PERCENT = 90  # porcentaje mínimo de inmersión
 
 # ============ CONFIGURACIÓN DE TIEMPO ============
 ALERT_CHECK_INTERVAL = 60  # minutos - revisar alertas cada 60 minutos (1 hora)
 FULL_REPORT_INTERVAL = 60  # minutos - enviar reporte completo cada 60 minutos (1 hora)
-WEEKLY_REPORT_DAY = 0  # día de la semana para reporte semanal (0=Lunes, 6=Domingo)
 
 def fetch_json(url):
     r = requests.get(url, headers=headers, cookies=cookies, timeout=30)
@@ -87,32 +85,6 @@ def get_detail(container_id):
     ]
 
     params = f"?output=json&area_id={AREA}&id={container_id}"
-
-    last_err = None
-    for base_url in candidates:
-        url = base_url + params
-        out = fetch_json(url)
-        if isinstance(out, dict) and not out.get("__error__"):
-            out["__endpoint__"] = base_url
-            return out
-        last_err = out
-
-    if isinstance(last_err, dict):
-        last_err["__tried__"] = candidates
-    return last_err
-
-def get_power(container_id):
-    candidates = [
-        "http://america.fboxdata.com/api/index/fbox.boxlist/getelectricity",
-        "http://america.fboxdata.com/api/index/fbox.electricity/getelectricity",
-        "http://america.fboxdata.com/api/index/fbox.power/getelectricity",
-        "http://america.fboxdata.com/api/index/fbox.elec/getelectricity",
-        "http://america.fboxdata.com/api/index/fbox.boxdetail/getelectricity",
-        "http://america.fboxdata.com/api/index/fbox.boxlist/electricity",
-        "http://america.fboxdata.com/api/index/fbox.electricity/index",
-    ]
-
-    params = f"?output=json&area_id={AREA}&fbox_id={container_id}"
 
     last_err = None
     for base_url in candidates:
@@ -208,12 +180,6 @@ def check_status():
 
     for name, cid in containers_data.items():
         detail = get_detail(cid)
-        power = get_power(cid)
-
-        if isinstance(power, dict) and power.get("__error__"):
-            msg += f"🔹 {name}\n"
-            msg += "⚠️ Error leyendo potencia\n\n"
-            continue
 
         if isinstance(detail, dict) and detail.get("__error__"):
             msg += f"🔹 {name}\n"
@@ -344,53 +310,8 @@ def detect_alerts(old_state, new_state):
             drop_percent = ((old_kw - new_kw) / old_kw) * 100
             if drop_percent >= POWER_DROP_THRESHOLD:
                 alerts.append(f"⚡ POTENCIA ANORMAL: {name} - Cayó {drop_percent:.1f}% ({old_kw} → {new_kw} kW)")
-        
-        # 💧 ALERTA: Inmersión offline o porcentaje bajo
-        immersion_status = new_data.get("immersion_status", "")
-        immersion_percent = new_data.get("immersion_percent")
-        
-        if immersion_status and "offline" in immersion_status.lower():
-            alerts.append(f"💧 INMERSIÓN OFFLINE: {name} - Sistema de inmersión no responde")
-        elif immersion_percent is not None and immersion_percent < IMMERSION_MIN_PERCENT:
-            alerts.append(f"💧 INMERSIÓN BAJA: {name} - {immersion_percent}% (mínimo: {IMMERSION_MIN_PERCENT}%)")
-        
-        # 🌀 ALERTA: Ventilador offline o con problemas
-        fan_status = new_data.get("fan_status")
-        if fan_status:
-            fan_status_str = str(fan_status).lower()
-            if fan_status_str in ["off", "offline", "0", "error", "fault"]:
-                alerts.append(f"🌀 VENTILADOR OFFLINE: {name} - Fan status: {fan_status}")
     
     return alerts
-
-
-def has_changes(old_state, new_state):
-    if not old_state:
-        return True
-    
-    for name in new_state:
-        if name not in old_state:
-            return True
-        
-        old = old_state[name]
-        new = new_state[name]
-        
-        if old.get("code") != new.get("code"):
-            return True
-        
-        if old.get("miner_online") != new.get("miner_online"):
-            return True
-        
-        if old.get("miner_offline") != new.get("miner_offline"):
-            return True
-        
-        old_temp = old.get("oil_temp")
-        new_temp = new.get("oil_temp")
-        if old_temp is not None and new_temp is not None:
-            if abs(old_temp - new_temp) > 3:
-                return True
-    
-    return False
 
 
 # ============ CONFIGURACIÓN DE ALMACENAMIENTO ============
@@ -408,7 +329,6 @@ if DROPBOX_PATH:
 STATE_FILE = str(STORAGE_PATH / "fbox_state.json")
 TIME_FILE = str(STORAGE_PATH / "last_report_time.json")
 HISTORY_FILE = str(STORAGE_PATH / "fbox_history.json")
-WEEKLY_TIME_FILE = str(STORAGE_PATH / "last_weekly_report.json")
 ALERTS_HISTORY_FILE = str(STORAGE_PATH / "fbox_alerts_history.json")
 
 def load_state():
@@ -522,173 +442,24 @@ def should_send_full_report():
 
 
 def load_last_weekly_report():
-    """Carga el timestamp del último reporte semanal"""
-    try:
-        if os.path.exists(WEEKLY_TIME_FILE):
-            with open(WEEKLY_TIME_FILE, 'r') as f:
-                data = json.load(f)
-                return data.get("last_weekly_report")
-        else:
-            print(f"ℹ️ Archivo de reporte semanal no existe: {WEEKLY_TIME_FILE}")
-    except Exception as e:
-        print(f"⚠️ Error cargando último reporte semanal: {e}")
+    """Carga el timestamp del último reporte semanal - DESHABILITADO"""
     return None
 
 def save_last_weekly_report():
-    """Guarda el timestamp actual como último reporte semanal"""
-    try:
-        with open(WEEKLY_TIME_FILE, 'w') as f:
-            json.dump({"last_weekly_report": now_paraguay().isoformat()}, f)
-        print(f"✅ Último reporte semanal guardado en: {WEEKLY_TIME_FILE}")
-    except Exception as e:
-        print(f"❌ Error guardando último reporte semanal: {e}")
+    """Guarda el timestamp actual como último reporte semanal - DESHABILITADO"""
+    pass
 
 def should_send_weekly_report():
-    """Determina si debe enviarse el reporte semanal (una vez por semana, los lunes)"""
-    # ❌ REPORTE SEMANAL DESHABILITADO
+    """Determina si debe enviarse el reporte semanal - DESHABILITADO"""
     return False
 
 def calculate_weekly_stats():
-    """Calcula estadísticas semanales del historial"""
-    try:
-        if not os.path.exists(HISTORY_FILE):
-            return None
-        
-        with open(HISTORY_FILE, 'r') as f:
-            history = json.load(f)
-        
-        if not history:
-            return None
-        
-        # Preparar estructura para estadísticas
-        stats = {}
-        
-        # Procesar cada registro
-        for record in history:
-            data = record.get("data", {})
-            
-            for container_name, container_data in data.items():
-                if container_name not in stats:
-                    stats[container_name] = {
-                        "oil_temps": [],
-                        "container_temps": [],
-                        "hashrates": [],
-                        "powers": [],
-                        "miners_online": [],
-                        "miners_offline": [],
-                        "online_count": 0,
-                        "offline_count": 0,
-                        "fan_online_count": 0,
-                        "fan_offline_count": 0
-                    }
-                
-                # Recolectar datos válidos
-                if container_data.get("oil_temp") is not None:
-                    stats[container_name]["oil_temps"].append(container_data["oil_temp"])
-                
-                if container_data.get("container_temp") is not None:
-                    stats[container_name]["container_temps"].append(container_data["container_temp"])
-                
-                if container_data.get("hashrate_ph") is not None:
-                    stats[container_name]["hashrates"].append(container_data["hashrate_ph"])
-                
-                if container_data.get("power_kw") is not None:
-                    stats[container_name]["powers"].append(container_data["power_kw"])
-                
-                if isinstance(container_data.get("miner_online"), int):
-                    stats[container_name]["miners_online"].append(container_data["miner_online"])
-                
-                if isinstance(container_data.get("miner_offline"), int):
-                    stats[container_name]["miners_offline"].append(container_data["miner_offline"])
-                
-                # Contador de estado online/offline
-                if container_data.get("code") == 1:
-                    stats[container_name]["online_count"] += 1
-                else:
-                    stats[container_name]["offline_count"] += 1
-                
-                # Contador de ventilador
-                fan_status = container_data.get("fan_status")
-                if fan_status:
-                    fan_str = str(fan_status).lower()
-                    if fan_str in ["on", "online", "1", "running"]:
-                        stats[container_name]["fan_online_count"] += 1
-                    else:
-                        stats[container_name]["fan_offline_count"] += 1
-        
-        # Calcular promedios
-        summary = {}
-        for container_name, data in stats.items():
-            summary[container_name] = {
-                "avg_oil_temp": round(sum(data["oil_temps"]) / len(data["oil_temps"]), 1) if data["oil_temps"] else None,
-                "max_oil_temp": round(max(data["oil_temps"]), 1) if data["oil_temps"] else None,
-                "min_oil_temp": round(min(data["oil_temps"]), 1) if data["oil_temps"] else None,
-                "avg_container_temp": round(sum(data["container_temps"]) / len(data["container_temps"]), 1) if data["container_temps"] else None,
-                "avg_hashrate": round(sum(data["hashrates"]) / len(data["hashrates"]), 2) if data["hashrates"] else None,
-                "avg_power": round(sum(data["powers"]) / len(data["powers"]), 1) if data["powers"] else None,
-                "avg_miners_online": round(sum(data["miners_online"]) / len(data["miners_online"]), 1) if data["miners_online"] else None,
-                "avg_miners_offline": round(sum(data["miners_offline"]) / len(data["miners_offline"]), 1) if data["miners_offline"] else None,
-                "uptime_percent": round((data["online_count"] / (data["online_count"] + data["offline_count"])) * 100, 1) if (data["online_count"] + data["offline_count"]) > 0 else 0,
-                "fan_uptime_percent": round((data["fan_online_count"] / (data["fan_online_count"] + data["fan_offline_count"])) * 100, 1) if (data["fan_online_count"] + data["fan_offline_count"]) > 0 else None,
-                "total_records": len(history)
-            }
-        
-        return summary
-    except Exception:
-        return None
+    """Calcula estadísticas semanales - DESHABILITADO"""
+    return None
 
 def generate_weekly_report():
-    """Genera el reporte semanal resumido"""
-    stats = calculate_weekly_stats()
-    
-    if not stats:
-        return "📊 REPORTE SEMANAL\n\nNo hay datos suficientes para generar el reporte."
-    
-    msg = "📊 REPORTE SEMANAL FBOX\n"
-    msg += f"📅 {now_paraguay().strftime('%Y-%m-%d')}\n"
-    msg += f"Período: Últimos 7 días\n\n"
-    
-    for container_name, data in stats.items():
-        msg += f"━━━━━ {container_name} ━━━━━\n"
-        
-        # Uptime
-        msg += f"✅ Uptime: {data['uptime_percent']}%\n"
-        
-        # Temperatura del aceite
-        if data['avg_oil_temp']:
-            msg += f"🔥 Temp. Aceite:\n"
-            msg += f"   • Promedio: {data['avg_oil_temp']}°C\n"
-            msg += f"   • Máxima: {data['max_oil_temp']}°C\n"
-            msg += f"   • Mínima: {data['min_oil_temp']}°C\n"
-        
-        # Temperatura del contenedor
-        if data['avg_container_temp']:
-            msg += f"🌡️ Temp. Contenedor: {data['avg_container_temp']}°C (prom)\n"
-        
-        # Mineros
-        if data['avg_miners_online']:
-            msg += f"⛏ Mineros:\n"
-            msg += f"   • Online: {data['avg_miners_online']} (prom)\n"
-            msg += f"   • Offline: {data['avg_miners_offline']} (prom)\n"
-        
-        # Hashrate
-        if data['avg_hashrate']:
-            msg += f"⚙️ Hashrate: {data['avg_hashrate']} PH/s (prom)\n"
-        
-        # Potencia
-        if data['avg_power']:
-            msg += f"⚡ Potencia: {data['avg_power']} kW (prom)\n"
-        
-        # Ventilador
-        if data['fan_uptime_percent'] is not None:
-            msg += f"🌀 Fan Uptime: {data['fan_uptime_percent']}%\n"
-        
-        msg += "\n"
-    
-    msg += f"📈 Total de mediciones: {stats[list(stats.keys())[0]]['total_records']}\n"
-    msg += f"⏱️ Frecuencia: Cada {ALERT_CHECK_INTERVAL} minutos"
-    
-    return msg
+    """Genera el reporte semanal - DESHABILITADO"""
+    return ""
 
 
 # ============ EJECUCIÓN ÚNICA ============
@@ -735,14 +506,6 @@ if __name__ == "__main__":
                 print("⏭️ Próximo reporte en breve")
         else:
             print("⏭️ Esperando próxima ventana de reporte")
-    
-    # Reporte semanal automático (cada lunes)
-    if should_send_weekly_report():
-        weekly_msg = generate_weekly_report()
-        send_telegram(weekly_msg)
-        save_last_weekly_report()
-        print("📊 REPORTE SEMANAL ENVIADO (lunes)")
-        print(weekly_msg)
     
     # Guardar estado actual y agregar al historial
     save_state(current_state)
