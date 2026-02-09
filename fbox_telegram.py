@@ -545,33 +545,8 @@ def save_last_weekly_report():
 
 def should_send_weekly_report():
     """Determina si debe enviarse el reporte semanal (una vez por semana, los lunes)"""
-    now = now_paraguay()
-    
-    # Verificar si es el día configurado para el reporte
-    if now.weekday() != WEEKLY_REPORT_DAY:
-        return False
-    
-    last_time = load_last_weekly_report()
-    if not last_time:
-        return True  # Primera ejecución
-    
-    try:
-        # Asegurar que es un string antes de parsear
-        if not isinstance(last_time, str):
-            return True
-        
-        last_dt = datetime.fromisoformat(last_time)
-        now_dt = now_paraguay()
-        
-        # Calcular días completos desde el último reporte
-        days_elapsed = (now_dt - last_dt).days
-        
-        # Solo enviar si han pasado al menos 7 días (una semana completa)
-        # Esto asegura que no se envíe múltiples veces en el mismo lunes
-        return days_elapsed >= 7
-    except Exception as e:
-        print(f"Error en should_send_weekly_report: {e}")
-        return True  # Si hay error, enviar para estar seguro
+    # ❌ REPORTE SEMANAL DESHABILITADO
+    return False
 
 def calculate_weekly_stats():
     """Calcula estadísticas semanales del historial"""
