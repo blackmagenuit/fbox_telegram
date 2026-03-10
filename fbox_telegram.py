@@ -553,12 +553,16 @@ if __name__ == "__main__":
     msg, current_state = check_status()
     old_state = load_state()
     
-    # Detectar alertas pero NO enviar por Telegram (solo guardaria en historial)
+    # Detectar alertas y enviarlas INMEDIATAMENTE por Telegram
     alerts = detect_alerts(old_state, current_state)
     
     if alerts:
         save_alerts_to_history(alerts)  # Guardar alertas en historial para Excel
-        print("✅ Alertas detectadas y guardadas en historial:")
+        alert_section = "🚨 ALERTAS DETECTADAS:\n"
+        for alert in alerts:
+            alert_section += f"{alert}\n"
+        send_telegram(alert_section)
+        print("🚨 ALERTAS ENVIADAS POR TELEGRAM:")
         for alert in alerts:
             print(f"  - {alert}")
     else:
@@ -566,14 +570,6 @@ if __name__ == "__main__":
     
     # Enviar reporte completo solo cada hora (CON O SIN ALERTAS)
     if should_send_full_report():
-        # Incluir alertas en el reporte si las hay
-        if alerts:
-            alert_section = "🚨 ALERTAS DETECTADAS:\n"
-            for alert in alerts:
-                alert_section += f"{alert}\n"
-            alert_section += "\n"
-            msg = alert_section + msg
-        
         send_telegram(msg)
         save_last_report_time()
         print("📊 REPORTE ENVIADO (cada hora)")
