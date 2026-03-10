@@ -41,12 +41,16 @@ jobs:
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHAT_ID: ${{ secrets.CHAT_ID }}
+        FBOX_USERNAME: ${{ secrets.FBOX_USERNAME }}
+        FBOX_PASSWORD: ${{ secrets.FBOX_PASSWORD }}
         FBOX_SSID: ${{ secrets.FBOX_SSID }}
         FBOX_ADMIN_TOKEN: ${{ secrets.FBOX_ADMIN_TOKEN }}
       run: |
         cat > .env << EOF
         BOT_TOKEN=$BOT_TOKEN
         CHAT_ID=$CHAT_ID
+        FBOX_USERNAME=$FBOX_USERNAME
+        FBOX_PASSWORD=$FBOX_PASSWORD
         FBOX_SSID=$FBOX_SSID
         FBOX_ADMIN_TOKEN=$FBOX_ADMIN_TOKEN
         DROPBOX_PATH=

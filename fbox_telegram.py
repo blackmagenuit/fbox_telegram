@@ -36,8 +36,8 @@ BASE = "http://america.fboxdata.com/api/index/fbox.boxlist"
 cookies = {
     "lang": "en-us",
     "language": "en",
-    "ssid": os.environ.get("FBOX_SSID"),
-    "Admin-Token": os.environ.get("FBOX_ADMIN_TOKEN")
+    "ssid": os.environ.get("FBOX_SSID", ""),
+    "Admin-Token": os.environ.get("FBOX_ADMIN_TOKEN", "")
 }
 
 headers = {
@@ -45,6 +45,86 @@ headers = {
     "Accept": "application/json, text/plain, */*",
     "Referer": "http://america.fboxdata.com/"
 }
+
+def check_session_valid():
+    """Verifica si las cookies actuales siguen siendo válidas usando getuserinfo."""
+    url = f"http://america.fboxdata.com/api/index/getuserinfo?output=json&area_id={AREA}"
+    try:
+        r = requests.get(url, headers=headers, cookies=cookies, timeout=10)
+        if r.status_code == 200 and "application/json" in r.headers.get("Content-Type", ""):
+            data = r.json()
+            if data.get("code") == 1:
+                print("✅ Sesión FBox activa (cookies válidas)")
+                return True
+    except Exception as e:
+        print(f"⚠️ Error verificando sesión: {e}")
+    print("❌ Cookies inválidas o expiradas")
+    return False
+
+
+def fbox_login():
+    """Inicia sesión en FBox con usuario/contraseña y actualiza las cookies globales.
+    Retorna True si el login fue exitoso, False si falló o no hay credenciales."""
+    username = os.environ.get("FBOX_USERNAME")
+    password = os.environ.get("FBOX_PASSWORD")
+
+    if not username or not password:
+        print("ℹ️  Sin credenciales FBOX_USERNAME/FBOX_PASSWORD, usando cookies guardadas.")
+        valid = check_session_valid()
+        if not valid:
+            send_telegram("⚠️ AVISO: Las cookies de FBox han expirado. Actualizar FBOX_SSID y FBOX_ADMIN_TOKEN en los secrets de GitHub.")
+        return valid
+
+    print(f"🔐 Intentando login en FBox como: {username}")
+
+    login_endpoints = [
+        "http://america.fboxdata.com/api/index/login/login",
+        "http://america.fboxdata.com/api/index/admin.login/login",
+        "http://america.fboxdata.com/api/index/user.login/login",
+        "http://america.fboxdata.com/api/index/login",
+    ]
+    login_payloads = [
+        {"account": username, "password": password},
+        {"username": username, "password": password},
+        {"email": username, "password": password},
+    ]
+
+    session = requests.Session()
+
+    for endpoint in login_endpoints:
+        for payload in login_payloads:
+            try:
+                r = session.post(endpoint, data=payload, headers=headers, timeout=15)
+                if r.status_code != 200:
+                    continue
+                ct = r.headers.get("Content-Type", "")
+                if "application/json" not in ct:
+                    continue
+                resp = r.json()
+                if resp.get("code") == 1:
+                    # Actualizar cookies desde la sesión
+                    for name in ("ssid", "Admin-Token"):
+                        val = session.cookies.get(name)
+                        if val:
+                            cookies[name] = val
+                    # Intentar obtener token desde el cuerpo de la respuesta
+                    data_body = resp.get("data") or {}
+                    if isinstance(data_body, dict):
+                        for key in ("ssid", "token", "admin_token", "adminToken"):
+                            val = data_body.get(key)
+                            if val:
+                                if key == "ssid":
+                                    cookies["ssid"] = val
+                                else:
+                                    cookies["Admin-Token"] = val
+                    print(f"✅ Login exitoso via {endpoint}")
+                    return True
+            except Exception as e:
+                print(f"  ⚠️ Error en {endpoint}: {e}")
+                continue
+
+    print("❌ Login fallido en todos los endpoints. Usando cookies guardadas.")
+    return False
 
 # ============ UMBRALES DE ALERTAS ============
 TEMP_ALERT_THRESHOLD = 55  # °C
@@ -466,7 +546,10 @@ def generate_weekly_report():
 if __name__ == "__main__":
     print(f"⏰ Ejecutando check: {now_paraguay()}")
     print(f"📋 Configuración: Reporte cada {FULL_REPORT_INTERVAL} min")
-    
+
+    # Intentar login automático para obtener cookies frescas
+    fbox_login()
+
     msg, current_state = check_status()
     old_state = load_state()
     
