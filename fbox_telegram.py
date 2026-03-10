@@ -544,6 +544,21 @@ def generate_weekly_report():
 
 # ============ EJECUCIÓN ÚNICA ============
 if __name__ == "__main__":
+    import sys
+
+    # Modo test: python fbox_telegram.py --test
+    if "--test" in sys.argv:
+        print("🧪 MODO TEST: Enviando alerta de prueba...")
+        test_msg = (
+            "🧪 ALERTA DE PRUEBA\n"
+            "🚨 CRÍTICO: C01 está OFFLINE\n"
+            "🚨 CRÍTICO: C02 está OFFLINE\n"
+            "\n✅ Si ves este mensaje, las alertas funcionan correctamente."
+        )
+        send_telegram(test_msg)
+        print("✅ Alerta de prueba enviada")
+        sys.exit(0)
+
     print(f"⏰ Ejecutando check: {now_paraguay()}")
     print(f"📋 Configuración: Reporte cada {FULL_REPORT_INTERVAL} min")
 
