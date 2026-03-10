@@ -197,7 +197,9 @@ En tu repositorio: **Settings** → **Secrets and variables** → **Actions**
 | `TELEGRAM_BOT_TOKEN` | Token del bot | @BotFather en Telegram → `/newbot` |
 | `CHAT_ID` | ID del canal/chat | Añade bot al canal → `/getUpdates` |
 | `FBOX_SSID` | Cookie de sesión FBOX | F12 en fboxdata.com → Application → Cookies |
-| `ADMIN_TOKEN` | Token admin de FBOX | Opcional, para funciones avanzadas |
+| `FBOX_ADMIN_TOKEN` | Token admin de FBOX | F12 en fboxdata.com → Application → Cookies |
+| `FBOX_USERNAME` | Usuario/email de FBox | Opcional — permite auto-login para renovar cookies |
+| `FBOX_PASSWORD` | Contraseña de FBox | Opcional — usar junto con `FBOX_USERNAME` |
 
 ### ☁️ Paso 2: Configurar Dropbox (Opcional pero recomendado)
 
@@ -375,12 +377,47 @@ start_bot.bat
 2. Confirma `DROPBOX_ACCESS_TOKEN` en Render
 3. Revisa permisos de la app en Dropbox Developers
 
-### FBOX_SSID expiró
-1. Vuelve a iniciar sesión en fboxdata.com
-2. Copia nuevo valor de cookie `ssid`
-3. Actualiza en GitHub Secrets y Render
+### FBOX_SSID expiró / Contenedores muestran OFFLINE sin motivo
+1. El bot enviará un mensaje automático de aviso por Telegram cuando detecte cookies inválidas
+2. Vuelve a iniciar sesión en fboxdata.com
+3. Copia los nuevos valores de cookies `ssid` y `Admin-Token` (F12 → Application → Cookies)
+4. Actualiza `FBOX_SSID` y `FBOX_ADMIN_TOKEN` en GitHub Secrets
+5. **Prevención**: Configura `FBOX_USERNAME` y `FBOX_PASSWORD` en los secrets para habilitar auto-login
 
-## 📈 Roadmap y Mejoras Futuras
+### Probar que las alertas llegan
+1. Ve a **Actions → FBOX Telegram Bot → Run workflow**
+2. Seleccioná `test_alert: true`
+3. Deberías recibir un mensaje de prueba en Telegram
+
+## � Changelog
+
+### v2.2 — 2026-03-10
+- **fix**: Alertas (OFFLINE, temperatura, mineros) ahora se envían **inmediatamente** por Telegram sin esperar el reporte horario
+- **feat**: Verificación automática de sesión FBox al inicio de cada ejecución (`check_session_valid` via `getuserinfo`)
+- **feat**: Aviso por Telegram si las cookies de FBox han expirado en lugar de reportar OFFLINE silenciosamente
+- **feat**: Modo `--test` (`python fbox_telegram.py --test`) para probar el envío de alertas sin consumir datos reales
+- **feat**: Input `test_alert` en GitHub Actions workflow para disparar alerta de prueba desde la UI de GitHub
+- **feat**: Soporte para auto-login con `FBOX_USERNAME` / `FBOX_PASSWORD` cuando estén configurados
+- **fix**: Corregido nombre del secret `ADMIN_TOKEN` → `FBOX_ADMIN_TOKEN` para consistencia con el código
+
+### v2.1 — 2026-01-26
+- Integración con Dropbox API para almacenamiento persistente
+- Bot interactivo con comandos `/resumen`, `/resumen7`, `/resumen30`
+- Generación de reportes Excel con 4 hojas
+
+### v2.0 — 2026-01-10
+- Deployment en Render.com (bot 24/7)
+- Sistema de historial de alertas en JSON
+- Reportes Excel profesionales
+
+### v1.0
+- Monitor básico con GitHub Actions
+- Alertas por Telegram (OFFLINE, temperatura, mineros, potencia)
+- Reporte horario de estado
+
+---
+
+## �📈 Roadmap y Mejoras Futuras
 
 - [x] Bot interactivo con comandos
 - [x] Reportes Excel profesionales
@@ -407,5 +444,5 @@ Proyecto privado desarrollado por **blackmagenuit** para monitoreo de infraestru
 ---
 
 **Autor**: [@blackmagenuit](https://github.com/blackmagenuit)  
-**Última actualización**: 2026-01-26  
-**Versión**: 2.0 - Bot en la nube + Reportes Excel + Dropbox API
+**Última actualización**: 2026-03-10  
+**Versión**: 2.2
