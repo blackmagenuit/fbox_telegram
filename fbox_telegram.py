@@ -72,7 +72,7 @@ def fbox_login():
         print("ℹ️  Sin credenciales FBOX_USERNAME/FBOX_PASSWORD, usando cookies guardadas.")
         valid = check_session_valid()
         if not valid:
-            send_telegram("⚠️ AVISO: Las cookies de FBox han expirado. Actualizar FBOX_SSID y FBOX_ADMIN_TOKEN en los secrets de GitHub.")
+            print("❌ Cookies inválidas o expiradas. Actualizar FBOX_SSID y FBOX_ADMIN_TOKEN.")
         return valid
 
     print(f"🔐 Intentando login en FBox como: {username}")
