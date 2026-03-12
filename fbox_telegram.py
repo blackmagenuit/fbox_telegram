@@ -257,6 +257,8 @@ def check_status():
     msg = "📦 FBOX STATUS\n"
     msg += f"{now_paraguay().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
     state = {}
+    total_power_kw = 0.0
+    power_sources = 0
 
     for name, cid in containers_data.items():
         detail = get_detail(cid)
@@ -325,6 +327,8 @@ def check_status():
         # Potencia real desde API
         if container_data["power_kw"] is not None:
             msg += f"⚡ Potencia: {container_data['power_kw']} kW\n"
+            total_power_kw += container_data["power_kw"]
+            power_sources += 1
         else:
             msg += "⚡ Potencia: N/A\n"
         
@@ -339,6 +343,11 @@ def check_status():
             "hashrate_ph": container_data["hashrate_ph"],
             "power_kw": container_data["power_kw"]
         }
+
+    if power_sources > 0:
+        msg += f"⚡ Potencia total: {round(total_power_kw, 2)} kW\n"
+    else:
+        msg += "⚡ Potencia total: N/A\n"
 
     return msg, state
 
